@@ -1,0 +1,16 @@
+<body data-cart-id="{{user.cartId}}"></body>
+<h2>Nuestros Productos</h2>
+
+{{#if user}}
+    <p>Bienvenido, {{user.first_name}} {{user.last_name}}! Tu rol es: {{user.role}}</p>
+{{else}}
+    <p>No estás autenticado. Por favor, <a href="/login">inicia sesión</a> para ver y comprar productos.</p>
+{{/if}}
+
+<div id="products-container" class="products-grid">
+    <p>Cargando productos...</p>
+</div>
+
+<script src="/js/products.js"></script>
+
+<link rel="stylesheet" href="/styles.css">

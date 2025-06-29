@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}}</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+</head>
+<body>
+    <header>
+        <h1>Mi Tienda</h1>
+        <nav>
+            {{#if user}}
+                <span>Bienvenido, {{user.first_name}} {{user.last_name}} ({{user.role}})</span>
+                <a href="/products">Productos</a>
+                
+                {{!-- **AÑADE ESTO PARA EL ENLACE DE ADMIN** --}}
+                {{#ifEquals user.role "admin"}}
+                    <a href="/admin/create-product">Crear Producto</a>
+                {{/ifEquals}}
+
+                <form action="/api/sessions/logout" method="POST" style="display:inline;">
+                    <button type="submit" style="background:none; border:none; padding:0; cursor:pointer; color:inherit; text-decoration:underline;">Cerrar Sesión</button>
+                </form>
+            {{else}}
+                <a href="/login">Iniciar Sesión</a>
+                <a href="/register">Registrarse</a>
+            {{/if}}
+        </nav>
+    </header>
+    <main>
+        {{{body}}}
+    </main>
+    <footer>
+        <p>&copy; 2025 Mi Tienda</p>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</body>
+</html>
