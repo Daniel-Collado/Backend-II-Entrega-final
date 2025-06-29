@@ -1,20 +1,13 @@
-// src/routes/session.router.js
 import { Router } from 'express';
 import passport from 'passport';
 import jwt from 'jsonwebtoken';
 import config from '../config/index.js';
-import userModel from '../models/user.model.js'; // <-- AÑADIR: Importa tu userModel
-import cartModel from '../models/cart.model.js';   // <-- AÑADIR: Importa tu cartModel
+import userModel from '../models/user.model.js'; 
+import cartModel from '../models/cart.model.js';   
 
-// Asegúrate de que JWT_SECRET esté en config/index.js y .env
-const { JWT_SECRET } = config;
+const { JWT_SECRET, JWT_EXPIRATION_TIME, JWT_COOKIE_MAX_AGE_MS } = config;
 
 const router = Router();
-
-// Duración del token y la cookie (hazla consistente)
-const TOKEN_EXPIRATION_HOURS = 1; // O 1, según tu preferencia
-const COOKIE_MAX_AGE_MS = TOKEN_EXPIRATION_HOURS * 60 * 60 * 1000;
-
 
 // Ruta de registro
 router.post('/register', passport.authenticate('register', {
@@ -22,15 +15,15 @@ router.post('/register', passport.authenticate('register', {
     failureRedirect: '/failed'
 }), async (req, res) => {
     try {
-        const userForToken = req.user; // Obtiene el usuario recién creado de Passport
+        const userForToken = req.user; // De acá obtiene el usuario recién creado de Passport
 
         // Lógica para crear/asociar carrito en el registro
         let userCartId = userForToken.cart;
         if (!userCartId) {
             console.log(`Usuario ${userForToken.email} (registro) no tiene carrito. Creando uno nuevo...`);
             const newCart = await cartModel.create({});
-            userForToken.cart = newCart._id; // Asocia el ID del nuevo carrito al usuario en memoria
-            await userModel.findByIdAndUpdate(userForToken._id, { cart: newCart._id }); // Guarda en la DB
+            userForToken.cart = newCart._id; 
+            await userModel.findByIdAndUpdate(userForToken._id, { cart: newCart._id }); // Guardar
             userCartId = newCart._id;
             console.log(`Carrito creado y asignado al usuario ${userForToken.email}: ${userCartId}`);
         }
@@ -41,14 +34,14 @@ router.post('/register', passport.authenticate('register', {
             last_name: userForToken.last_name,
             email: userForToken.email,
             role: userForToken.role,
-            cart: userCartId // <-- AÑADIR: Incluye el cartId en el payload del JWT
-        }, config.JWT_SECRET, { expiresIn: `${TOKEN_EXPIRATION_HOURS}h` }); // Duración consistente
+            cart: userCartId 
+        },  JWT_SECRET, { expiresIn: JWT_EXPIRATION_TIME });
 
         res.cookie('jwtCookie', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: COOKIE_MAX_AGE_MS // Duración consistente
+            maxAge: JWT_COOKIE_MAX_AGE_MS
         });
 
         res.status(201).json({
@@ -59,7 +52,7 @@ router.post('/register', passport.authenticate('register', {
                 last_name: userForToken.last_name,
                 email: userForToken.email,
                 role: userForToken.role,
-                cartId: userCartId // Para la respuesta al frontend
+                cartId: userCartId 
             }
         });
 
@@ -79,54 +72,52 @@ router.post("/login", passport.authenticate("login", {
         const user = req.user; // Usuario autenticado por Passport
 
         // Lógica para crear/asociar carrito si no existe
-        let userCartId = user.cart; // ID de carrito del usuario de la DB (podría ser null)
+        let userCartId = user.cart;
 
         if (!userCartId) {
             console.log(`Usuario ${user.email} (login) no tiene carrito. Creando uno nuevo...`);
-            const newCart = await cartModel.create({}); // Crea un carrito vacío
-            user.cart = newCart._id; // Asocia el ID del nuevo carrito al user object de Mongoose
-            await user.save();       // Guarda el usuario actualizado en la DB con el nuevo cart ID
-            userCartId = newCart._id; // Asigna el ID del nuevo carrito para usarlo
+            const newCart = await cartModel.create({}); 
+            user.cart = newCart._id; 
+            await user.save();      
+            userCartId = newCart._id; 
             console.log(`Carrito creado y asignado al usuario ${user.email}: ${userCartId}`);
         } else {
             console.log(`Usuario ${user.email} ya tiene carrito: ${userCartId}`);
-            // Opcional: Podrías querer verificar si ese cartId realmente existe en la DB
-            // y si no, crear uno nuevo. Para simplificar, asumimos que si no es null, es válido.
         }
 
-        const userForToken = { ...user._doc }; // Objeto plano para el token
-        delete userForToken.password; // Elimina el password
-        userForToken.cart = userCartId; // <-- AÑADIR: Incluye el cartId en el payload del JWT
+        const userForToken = { ...user._doc }; 
+        delete userForToken.password; 
+        userForToken.cart = userCartId; 
 
-        const token = jwt.sign({ user: userForToken }, JWT_SECRET, { expiresIn: `${TOKEN_EXPIRATION_HOURS}h` }); // Duración consistente
+        const token = jwt.sign({ user: userForToken }, JWT_SECRET, { expiresIn: JWT_EXPIRATION_TIME });
         res.cookie('jwtCookie', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: COOKIE_MAX_AGE_MS // Duración consistente
+            maxAge: JWT_COOKIE_MAX_AGE_MS 
         });
 
-        res.redirect("/profile"); // Redirige al perfil o donde desees (ahora con carrito)
+        res.redirect("/profile"); // Redirige
     } catch (error) {
         console.error("Error en la ruta de login después de autenticación:", error);
         res.redirect("/failed");
     }
 });
 
-// Ruta de logout (sin cambios)
+// Ruta de logout 
 router.post("/logout", (req, res) => {
     res.clearCookie('jwtCookie');
     res.redirect("/login");
 });
 
-// Ruta /current (sin cambios, ya debería devolver el cart en req.user si lo pusiste en JWT)
+// Ruta /current 
 router.get("/current", passport.authenticate('jwt', { session: false }), (req, res) => {
     res.json({ status: "success", user: req.user });
 });
 
-// Ruta /restore (sin cambios)
+// Ruta /restore 
 router.post('/restore', async (req, res) => {
-    // ... tu código de restore
+    
 });
 
 export default router;
