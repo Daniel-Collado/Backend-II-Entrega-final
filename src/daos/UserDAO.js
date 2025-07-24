@@ -9,12 +9,17 @@ class UserDAO {
         return await userModel.findOne(query).lean();
     }
 
+    async findOneRaw(query) {
+        console.log('DEBUG (UserDAO): Ejecutando findOneRaw con query:', query); // Log de la consulta
+        return await userModel.findOne(query);
+    }
+
     async create(data) {
         return await userModel.create(data);
     }
 
     async update(id, data) {
-        return await userModel.findByIdAndUpdate(id, data, { new: true }).lean();
+        return await userModel.findByIdAndUpdate(id, data, { new: true });
     }
 
     async delete(id) {

@@ -1,5 +1,7 @@
 <h2>Iniciar Sesión</h2>
-<form action="/api/sessions/login" method="POST">  <div>
+
+<form id="loginForm" action="/api/sessions/login" method="POST">
+    <div>
         <label for="email">Email:</label>
         <input type="email" id="email" name="email" required>
     </div>
@@ -9,5 +11,48 @@
     </div>
     <button type="submit">Iniciar Sesión</button>
 </form>
-<p>¿No tienes cuenta? <a href="/register">Regístrate aquí</a></p>
-<p>¿No recordás tu password? <a href="/restore">Restaurar contraseña</a></p>
+
+<p>¿No tienes una cuenta? <a href="/register">Regístrate aquí</a></p>
+<p>¿Olvidaste tu contraseña? <a href="/request-password-reset">Restablecer Contraseña</a></p>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('loginForm');
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email: email, password: password })
+                });
+
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    const data = await response.json();
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de Inicio de Sesión',
+                        text: data.message || 'Credenciales inválidas. Por favor, inténtalo de nuevo.'
+                    });
+                }
+            } catch (error) {
+                console.error('Error de red al iniciar sesión:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de Conexión',
+                    text: 'No se pudo conectar al servidor para iniciar sesión.',
+                });
+            }
+        });
+    });
+</script>

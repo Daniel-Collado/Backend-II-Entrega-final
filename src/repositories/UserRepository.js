@@ -32,7 +32,7 @@ class UserRepository {
 
     async findUserRaw(query) {
         // Usuario completo (incluye password)
-        return await this.dao.findOne(query);
+        return await this.dao.findOneRaw(query);
     }
 
     async updateUserRaw(id, data) {

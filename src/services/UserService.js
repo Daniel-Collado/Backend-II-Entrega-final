@@ -21,22 +21,22 @@ class UserService {
 
     async registerUser(userData) {
         const { email, password } = userData;
-        const userFound = await this.userRepository.findUserRaw({ email }); // Obtener el objeto completo
+        const userFound = await this.userRepository.findUserRaw({ email });
         if (userFound) {
             throw new Error("El email ya está registrado.");
         }
         userData.password = createHash(password);
         userData.role = email === 'adminCoder@coder.com' ? 'admin' : 'user';
         const newUser = await this.userRepository.createUser(userData);
-        return newUser; // DTO
+        return newUser;
     }
 
     async loginUser(email, password) {
-        const user = await this.userRepository.findUserRaw({ email }); // Obtener el objeto completo
+        const user = await this.userRepository.findUserRaw({ email });
         if (!user || !isValidPassword(password, user.password)) {
             throw new Error("Credenciales inválidas.");
         }
-        return user; 
+        return user;
     }
 
     async getCurrentUser(userId) {
@@ -49,14 +49,17 @@ class UserService {
 
     async requestPasswordReset(email) {
         const user = await this.userRepository.findUserRaw({ email });
+
         if (!user) {
             throw new Error("Usuario no encontrado.");
         }
 
         const resetToken = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: RESET_PASSWORD_TOKEN_EXPIRATION });
+        const resetPasswordExpires = Date.now() + (RESET_PASSWORD_TOKEN_EXPIRATION * 1000); // Convertir a milisegundos
+
         await this.userRepository.updateUserRaw(user._id, {
             resetPasswordToken: resetToken,
-            resetPasswordExpires: Date.now() + (RESET_PASSWORD_TOKEN_EXPIRATION * 1000) 
+            resetPasswordExpires: resetPasswordExpires
         });
 
         const resetLink = `http://localhost:${config.PORT}/reset-password?token=${resetToken}`;
@@ -66,11 +69,11 @@ class UserService {
             to: user.email,
             subject: 'Restablecimiento de Contraseña',
             html: `
-                <p>Solicitaste restablecer tu contraseña.</p>
-                <p>Hacé clic en el siguiente enlace para restablecerla:</p>
+                <p>Has solicitado restablecer tu contraseña.</p>
+                <p>Haz clic en el siguiente enlace para restablecerla:</p>
                 <a href="${resetLink}">Restablecer Contraseña</a>
-                <p>Este enlace se autodestruirá en ${RESET_PASSWORD_TOKEN_EXPIRATION / 60} minutos.</p>
-                <p>Si no solicitaste esto, ignorá este correo.</p>
+                <p>Este enlace expirará en ${RESET_PASSWORD_TOKEN_EXPIRATION / 60} minutos.</p>
+                <p>Si no solicitaste esto, ignora este correo.</p>
             `
         };
 
@@ -84,24 +87,41 @@ class UserService {
     }
 
     async resetPassword(token, newPassword) {
-        const user = await this.userRepository.findUserRaw({
-            resetPasswordToken: token,
-            resetPasswordExpires: { $gt: Date.now() }
-        });
+        let decodedToken;
+        try {
+            decodedToken = jwt.verify(token, JWT_SECRET);
+        } catch (error) {
+            throw new Error("Token inválido o expirado.");
+        }
+
+        const userIdFromToken = decodedToken.userId;
+
+        const user = await this.userRepository.findUserRaw({ _id: userIdFromToken });
 
         if (!user) {
             throw new Error("Token inválido o expirado.");
         }
 
-        // Evitar que el usuario pueda restablecer la contraseña a la que ya tenía anteriormente.
+        if (user.resetPasswordToken !== token) {
+            throw new Error("Token inválido o expirado.");
+        }
+
+        const currentTimestamp = Date.now();
+        const expiresTimestamp = new Date(user.resetPasswordExpires).getTime();
+
+        if (expiresTimestamp < currentTimestamp) {
+            throw new Error("Token inválido o expirado.");
+        }
+
         if (isValidPassword(newPassword, user.password)) {
             throw new Error("La nueva contraseña no puede ser igual a la anterior.");
         }
 
-        user.password = createHash(newPassword);
-        user.resetPasswordToken = undefined;
-        user.resetPasswordExpires = undefined;
-        await this.userRepository.updateUserRaw(user._id, user); // Usuario actualizado
+        await this.userRepository.updateUserRaw(user._id, {
+            password: createHash(newPassword), // Hashear la nueva contraseña
+            resetPasswordToken: undefined, // Eliminar el token
+            resetPasswordExpires: undefined // Eliminar la expiración
+        });
 
         return true;
     }
