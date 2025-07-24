@@ -4,7 +4,6 @@ import { Strategy as LocalStrategy } from "passport-local";
 import { Strategy as JWTStrategy, ExtractJwt } from "passport-jwt";
 import userModel from '../models/user.model.js';
 import { createHash, isValidPassword } from '../../utils.js';
-
 import config from './index.js'; 
 
 const PRIVATE_KEY = config.JWT_SECRET; 
@@ -108,25 +107,6 @@ const initializedPassport = () => {
     passport.use("register", registerLocalStrategy);
     passport.use("login", loginLocalStrategy);
     passport.use("jwt", jwtStrategy);
-
-    passport.serializeUser((user, done) => {
-        done(null, user._id);
-    });
-
-    passport.deserializeUser(async (id, done) => {
-        //console.log("Deserializando usuario con ID:", id); 
-        try {
-            const user = await userModel.findById(id).lean();
-            if (!user) {
-                return done(null, false);
-            }
-            delete user.password;
-            done(null, user);
-        } catch (error) {
-            console.error("Error en deserialización:", error.message);
-            done(error);
-        }
-    });
 };
 
 export default initializedPassport;

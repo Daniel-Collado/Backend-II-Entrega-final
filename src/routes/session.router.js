@@ -2,8 +2,9 @@ import { Router } from 'express';
 import passport from 'passport';
 import jwt from 'jsonwebtoken';
 import config from '../config/index.js';
-import userModel from '../models/user.model.js'; 
-import cartModel from '../models/cart.model.js';   
+import UserService from '../services/UserService.js'; // Importar el servicio de usuario
+import CartService from '../services/CartService.js'; // Importar el servicio de carrito
+import UserDTO from '../dtos/UserDTO.js'; // Importar el DTO
 
 const { JWT_SECRET, JWT_EXPIRATION_TIME, JWT_COOKIE_MAX_AGE_MS } = config;
 
@@ -15,27 +16,24 @@ router.post('/register', passport.authenticate('register', {
     failureRedirect: '/failed'
 }), async (req, res) => {
     try {
-        const userForToken = req.user; // De acá obtiene el usuario recién creado de Passport
+        const user = req.user;
 
-        // Lógica para crear/asociar carrito en el registro
-        let userCartId = userForToken.cart;
+        // Crear/asociar carrito en el registro
+        let userCartId = user.cart;
         if (!userCartId) {
-            console.log(`Usuario ${userForToken.email} (registro) no tiene carrito. Creando uno nuevo...`);
-            const newCart = await cartModel.create({});
-            userForToken.cart = newCart._id; 
-            await userModel.findByIdAndUpdate(userForToken._id, { cart: newCart._id }); // Guardar
+            console.log(`Usuario ${user.email} (registro) no tiene carrito. Creando uno nuevo...`);
+            const newCart = await CartService.createCart(); // Usar el servicio de carrito
+            user.cart = newCart._id;
+            await UserService.updateUserDetails(user._id, { cart: newCart._id }); // Usar el servicio de usuario para actualizar
             userCartId = newCart._id;
-            console.log(`Carrito creado y asignado al usuario ${userForToken.email}: ${userCartId}`);
+            console.log(`Carrito creado y asignado al usuario ${user.email}: ${userCartId}`);
         }
 
-        const token = jwt.sign({
-            id: userForToken._id,
-            first_name: userForToken.first_name,
-            last_name: userForToken.last_name,
-            email: userForToken.email,
-            role: userForToken.role,
-            cart: userCartId 
-        },  JWT_SECRET, { expiresIn: JWT_EXPIRATION_TIME });
+        const userForToken = { ...user._doc };
+        delete userForToken.password;
+        userForToken.cart = userCartId;
+
+        const token = jwt.sign({ user: userForToken }, JWT_SECRET, { expiresIn: JWT_EXPIRATION_TIME });
 
         res.cookie('jwtCookie', token, {
             httpOnly: true,
@@ -44,17 +42,7 @@ router.post('/register', passport.authenticate('register', {
             maxAge: JWT_COOKIE_MAX_AGE_MS
         });
 
-        res.status(201).json({
-            status: "success",
-            message: "Registro exitoso",
-            user: {
-                first_name: userForToken.first_name,
-                last_name: userForToken.last_name,
-                email: userForToken.email,
-                role: userForToken.role,
-                cartId: userCartId 
-            }
-        });
+        res.redirect("/profile");
 
     } catch (error) {
         console.error("Error en la ruta de registro después de autenticación:", error);
@@ -69,32 +57,32 @@ router.post("/login", passport.authenticate("login", {
     session: false
 }), async (req, res) => {
     try {
-        const user = req.user; // Usuario autenticado por Passport
+        const user = req.user;
 
-        // Lógica para crear/asociar carrito si no existe
+        // Crear/asociar carrito si no existe
         let userCartId = user.cart;
 
         if (!userCartId) {
             console.log(`Usuario ${user.email} (login) no tiene carrito. Creando uno nuevo...`);
-            const newCart = await cartModel.create({}); 
-            user.cart = newCart._id; 
-            await user.save();      
-            userCartId = newCart._id; 
+            const newCart = await CartService.createCart(); // Usar el servicio de carrito
+            user.cart = newCart._id;
+            await UserService.updateUserDetails(user._id, { cart: newCart._id }); // Usar el servicio de usuario para actualizar
+            userCartId = newCart._id;
             console.log(`Carrito creado y asignado al usuario ${user.email}: ${userCartId}`);
         } else {
             console.log(`Usuario ${user.email} ya tiene carrito: ${userCartId}`);
         }
 
-        const userForToken = { ...user._doc }; 
-        delete userForToken.password; 
-        userForToken.cart = userCartId; 
+        const userForToken = { ...user._doc };
+        delete userForToken.password;
+        userForToken.cart = userCartId;
 
         const token = jwt.sign({ user: userForToken }, JWT_SECRET, { expiresIn: JWT_EXPIRATION_TIME });
         res.cookie('jwtCookie', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: JWT_COOKIE_MAX_AGE_MS 
+            maxAge: JWT_COOKIE_MAX_AGE_MS
         });
 
         res.redirect("/profile"); // Redirige
@@ -104,20 +92,46 @@ router.post("/login", passport.authenticate("login", {
     }
 });
 
-// Ruta de logout 
+// Ruta de logout
 router.post("/logout", (req, res) => {
     res.clearCookie('jwtCookie');
     res.redirect("/login");
 });
 
-// Ruta /current 
-router.get("/current", passport.authenticate('jwt', { session: false }), (req, res) => {
-    res.json({ status: "success", user: req.user });
+// Ruta /current (DTO)
+router.get("/current", passport.authenticate('jwt', { session: false }), async (req, res) => {
+    try {
+        // Filtra información sensible
+        const userDTO = new UserDTO(req.user);
+        res.json({ status: "success", user: userDTO });
+    } catch (error) {
+        console.error("Error en /current:", error);
+        res.status(500).json({ status: "error", message: "Error al obtener usuario actual." });
+    }
 });
 
-// Ruta /restore 
-router.post('/restore', async (req, res) => {
-    
+// Ruta para pedir restablecimiento de contraseña
+router.post('/requestPasswordReset', async (req, res) => {
+    try {
+        const { email } = req.body;
+        await UserService.requestPasswordReset(email);
+        res.json({ status: "success", message: "Si el email está registrado, se ha enviado un enlace para restablecer la contraseña." });
+    } catch (error) {
+        console.error("Error al solicitar restablecimiento de contraseña:", error);
+        res.status(500).json({ status: "error", message: error.message || "Error al procesar la solicitud de restablecimiento." });
+    }
+});
+
+// Ruta para restablecer contraseña
+router.post('/resetPassword', async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+        await UserService.resetPassword(token, newPassword);
+        res.json({ status: "success", message: "Contraseña restablecida exitosamente." });
+    } catch (error) {
+        console.error("Error al restablecer contraseña:", error);
+        res.status(400).json({ status: "error", message: error.message || "Error al restablecer la contraseña." });
+    }
 });
 
 export default router;

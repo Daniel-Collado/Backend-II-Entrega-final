@@ -1,0 +1,29 @@
+<h2>Detalle de la Compra (Ticket)</h2>
+
+{{#if ticket}}
+    <div class="ticket-details-container">
+        <h3>Código de Ticket: {{ticket.code}}</h3>
+        <p><strong>Comprador:</strong> {{ticket.purchaser}}</p>
+        <p><strong>Fecha y Hora de Compra:</strong> {{formatDate ticket.purchase_datetime}}</p>
+        <p><strong>Monto Total:</strong> ${{ticket.amount}}</p>
+
+        {{#if ticket.products.length}}
+            <h4>Productos Comprados:</h4>
+            <div class="ticket-products-grid">
+                {{#each ticket.products}}
+                    <div class="ticket-product-card">
+                        <p><strong>Producto ID:</strong> {{product}}</p>
+                        <p><strong>Cantidad:</strong> {{quantity}}</p>
+                        <p><strong>Precio al comprar:</strong> ${{price}}</p>
+                    </div>
+                {{/each}}
+            </div>
+        {{else}}
+            <p>No hay productos listados en este ticket.</p>
+        {{/if}}
+        <p><a href="/products">Volver a Productos</a></p>
+    </div>
+{{else}}
+    <p>No se pudo encontrar el ticket solicitado.</p>
+    <p><a href="/products">Volver a Productos</a></p>
+{{/if}}

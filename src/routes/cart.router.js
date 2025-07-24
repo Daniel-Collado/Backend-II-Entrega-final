@@ -1,46 +1,16 @@
-
 import { Router } from 'express';
-import cartModel from '../models/cart.model.js';
-import userModel from '../models/user.model.js';
-import passport from 'passport'; 
+import CartService from '../services/CartService.js';
+import UserService from '../services/UserService.js'; 
+import { isAuthenticated, authorizeRoles, isCartOwnerOrAdmin as createIsCartOwnerOrAdminMiddleware } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
-// Middleware admin
-const isAdmin = (req, res, next) => {
-    if (req.user && req.user.role === 'admin') {
-        next();
-    } else {
-        res.status(403).json({ status: 'error', message: 'Acceso denegado. Se requiere rol de administrador.' });
-    }
-};
+const isCartOwnerOrAdmin = createIsCartOwnerOrAdminMiddleware(CartService, UserService);
 
-// Middleware carrito
-const isCartOwnerOrAdmin = async (req, res, next) => {
-    const cartId = req.params.cid || req.body.cartId; 
-    const userId = req.user._id;
-
-    if (req.user.role === 'admin') {
-        return next(); 
-    }
-
+// GET /api/carts - Obtener todos los carritos (sólo admin)
+router.get('/', isAuthenticated, authorizeRoles('admin'), async (req, res) => {
     try {
-        const user = await userModel.findById(userId);
-        if (!user || user.cart.toString() !== cartId) {
-            return res.status(403).json({ status: 'error', message: 'Acceso denegado. No eres el propietario de este carrito.' });
-        }
-        next();
-    } catch (error) {
-        console.error("Error al verificar propietario del carrito:", error);
-        res.status(500).json({ status: 'error', message: 'Error interno del servidor al verificar acceso al carrito.' });
-    }
-};
-
-
-// GET /api/carts - Obtener todos los carritos (solo admin)
-router.get('/', passport.authenticate('jwt', { session: false }), isAdmin, async (req, res) => {
-    try {
-        const carts = await cartModel.find().lean();
+        const carts = await CartService.cartRepository.dao.find();
         res.json({ status: 'success', payload: carts });
     } catch (error) {
         console.error("Error al obtener carritos:", error);
@@ -49,10 +19,10 @@ router.get('/', passport.authenticate('jwt', { session: false }), isAdmin, async
 });
 
 // GET /api/carts/:cid - Obtener un carrito por ID (dueño o admin)
-router.get('/:cid', passport.authenticate('jwt', { session: false }), isCartOwnerOrAdmin, async (req, res) => {
+router.get('/:cid', isAuthenticated, isCartOwnerOrAdmin, async (req, res) => {
     const cartId = req.params.cid;
     try {
-        const cart = await cartModel.findById(cartId).lean();
+        const cart = await CartService.getCartById(cartId);
         if (!cart) {
             return res.status(404).json({ status: 'error', message: 'Carrito no encontrado.' });
         }
@@ -63,11 +33,12 @@ router.get('/:cid', passport.authenticate('jwt', { session: false }), isCartOwne
     }
 });
 
-// POST /api/carts - Crear un nuevo carrito
-router.post('/', passport.authenticate('jwt', { session: false }), async (req, res) => {
+// POST /api/carts - Crear un nuevo carrito (cualquier usuario autenticado)
+router.post('/', isAuthenticated, async (req, res) => {
     try {
-        const newCart = await cartModel.create({}); // carrito vacío
-        await userModel.findByIdAndUpdate(req.user._id, { cart: newCart._id });
+        const newCart = await CartService.createCart();
+        // Asignar el carrito al usuario logueado
+        await UserService.updateUserDetails(req.user._id, { cart: newCart._id });
         res.status(201).json({ status: 'success', payload: newCart });
     } catch (error) {
         console.error("Error al crear carrito:", error);
@@ -75,49 +46,73 @@ router.post('/', passport.authenticate('jwt', { session: false }), async (req, r
     }
 });
 
-// POST /api/carts/:cid/products/:pid - Agregar un producto al carrito
-router.post('/:cid/products/:pid', passport.authenticate('jwt', { session: false }), isCartOwnerOrAdmin, async (req, res) => {
+// POST /api/carts/:cid/products/:pid - Agregar un producto al carrito (sólo usuario)
+router.post('/:cid/products/:pid', isAuthenticated, authorizeRoles('user'), isCartOwnerOrAdmin, async (req, res) => {
     const { cid, pid } = req.params;
-    const { quantity = 1 } = req.body; 
+    const { quantity = 1 } = req.body;
 
     try {
-        const cart = await cartModel.findById(cid);
-        if (!cart) {
-            return res.status(404).json({ status: 'error', message: 'Carrito no encontrado.' });
-        }
-
-        const productIndex = cart.products.findIndex(item => item.product.toString() === pid);
-
-        if (productIndex > -1) {
-            // actualiza la cantidad
-            cart.products[productIndex].quantity += quantity;
-        } else {
-            // si no existe, agrega el nuevo producto
-            cart.products.push({ product: pid, quantity });
-        }
-
-        await cart.save();
-        res.json({ status: 'success', payload: cart });
+        const updatedCart = await CartService.addProductToCart(cid, pid, quantity);
+        res.json({ status: 'success', payload: updatedCart });
     } catch (error) {
         console.error("Error al añadir producto al carrito:", error);
-        res.status(500).send("Error en el servidor");
+        res.status(500).json({ status: 'error', message: error.message || "Error en el servidor" });
     }
 });
 
-// DELETE /api/carts/:cid - Eliminar un carrito (solo admin o dueño)
-router.delete('/:cid', passport.authenticate('jwt', { session: false }), isCartOwnerOrAdmin, async (req, res) => {
+// Ruta para completar la compra de un carrito
+router.post('/:cid/purchase', isAuthenticated, authorizeRoles('user'), isCartOwnerOrAdmin, async (req, res) => {
+    const cartId = req.params.cid;
+    const purchaserEmail = req.user.email;
+
+    try {
+        const result = await CartService.completePurchase(cartId, purchaserEmail);
+        res.json({ status: 'success', payload: result });
+    } catch (error) {
+        console.error("Error al completar la compra:", error);
+        res.status(500).json({ status: 'error', message: error.message || "Error al procesar la compra." });
+    }
+});
+
+// DELETE /api/carts/:cid/products/:pid - Elimina un producto específico del carrito (sólo usuario o admin)
+router.delete('/:cid/products/:pid', isAuthenticated, authorizeRoles('user', 'admin'), isCartOwnerOrAdmin, async (req, res) => {
+    const { cid, pid } = req.params;
+    try {
+        const updatedCart = await CartService.removeProductFromCart(cid, pid);
+        res.json({ status: 'success', message: 'Producto eliminado del carrito exitosamente.', payload: updatedCart });
+    } catch (error) {
+        console.error("Error al eliminar producto del carrito:", error);
+        res.status(500).json({ status: 'error', message: error.message || "Error en el servidor al eliminar el producto del carrito." });
+    }
+});
+
+
+// Ruta para completar la compra de un carrito
+router.post('/:cid/purchase', isAuthenticated, authorizeRoles('user'), isCartOwnerOrAdmin, async (req, res) => {
+    const cartId = req.params.cid;
+    const purchaserEmail = req.user.email;
+
+    try {
+        const result = await CartService.completePurchase(cartId, purchaserEmail);
+        res.json({ status: 'success', payload: result });
+    } catch (error) {
+        console.error("Error al completar la compra:", error);
+        res.status(500).json({ status: 'error', message: error.message || "Error al procesar la compra." });
+    }
+});
+
+// DELETE /api/carts/:cid - Eliminar un carrito (sólo admin o dueño)
+router.delete('/:cid', isAuthenticated, isCartOwnerOrAdmin, async (req, res) => {
     const cartId = req.params.cid;
     try {
-        const result = await cartModel.deleteOne({ _id: cartId });
-        if (result.deletedCount === 0) {
-            return res.status(404).json({ status: 'error', message: 'Carrito no encontrado para eliminar.' });
-        }
-        await userModel.findOneAndUpdate({ cart: cartId }, { $set: { cart: null } });
-
-        res.json({ status: 'success', message: 'Carrito eliminado exitosamente.' });
+        await CartService.clearCart(cartId); 
+        // Para eliminar el carrito y desasociarlo del usuario:
+        // await CartService.cartRepository.delete(cartId);
+        // await UserService.updateUserDetails(req.user._id, { cart: null });
+        res.json({ status: 'success', message: 'Carrito vaciado exitosamente.' });
     } catch (error) {
         console.error("Error al eliminar carrito:", error);
-        res.status(500).send("Error en el servidor");
+        res.status(500).json({ status: 'error', message: error.message || "Error en el servidor" });
     }
 });
 
