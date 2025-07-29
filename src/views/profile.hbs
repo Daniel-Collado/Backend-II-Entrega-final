@@ -1,0 +1,16 @@
+
+<h2>Perfil de Usuario</h2>
+{{#if user}}
+    <p>Bienvenido, {{user.first_name}} {{user.last_name}}!</p>
+    <p>Email: {{user.email}}</p>
+    <p>Edad: {{user.age}}</p>
+    <p>Rol: {{user.role}}</p>
+    {{#if user.cart}}
+        <p>ID del Carrito: {{user.cart}}</p>
+    {{/if}}
+    <form action="/api/sessions/logout" method="POST">
+        <button type="submit">Cerrar Sesión</button>
+    </form>
+{{else}}
+    <p>No estás autenticado. Por favor, <a href="/login">inicia sesión</a>.</p>
+{{/if}}

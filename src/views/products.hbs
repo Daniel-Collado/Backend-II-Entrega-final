@@ -1,0 +1,56 @@
+<body data-cart-id="{{user.cartId}}" data-user-role="{{user.role}}"></body>
+<h2>Nuestros Productos</h2>
+
+{{#if user}}
+    <p>Bienvenido, {{user.first_name}} {{user.last_name}}! Tu rol es: {{user.role}}</p>
+{{else}}
+    <p>No estás autenticado. Por favor, <a href="/login">inicia sesión</a> para ver y comprar productos.</p>
+{{/if}}
+
+<div id="products-container" class="products-grid">
+    <p>Cargando productos...</p>
+</div>
+
+<!-- Edición de Producto (oculto por defecto) -->
+<div id="editProductModal" class="modal">
+    <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h3>Editar Producto</h3>
+        <form id="editProductForm">
+            <input type="hidden" id="editProductId">
+            <div>
+                <label for="editTitle">Título:</label>
+                <input type="text" id="editTitle" name="title" required>
+            </div>
+            <div>
+                <label for="editDescription">Descripción:</label>
+                <textarea id="editDescription" name="description" required></textarea>
+            </div>
+            <div>
+                <label for="editPrice">Precio:</label>
+                <input type="number" id="editPrice" name="price" step="0.01" required>
+            </div>
+            <div>
+                <label for="editStock">Stock:</label>
+                <input type="number" id="editStock" name="stock" required>
+            </div>
+            <div>
+                <label for="editCategory">Categoría:</label>
+                <input type="text" id="editCategory" name="category" required>
+            </div>
+            <div>
+                <label for="editCode">Código:</label>
+                <input type="text" id="editCode" name="code" required readonly> <!-- no editable -->
+            </div>
+            <div>
+                <label for="editThumbnail">URL de Miniatura:</label>
+                <input type="text" id="editThumbnail" name="thumbnail">
+            </div>
+            <button type="submit">Guardar Cambios</button>
+        </form>
+    </div>
+</div>
+
+<script src="/js/products.js"></script>
+
+<link rel="stylesheet" href="/styles.css">

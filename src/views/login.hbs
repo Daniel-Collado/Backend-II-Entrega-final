@@ -1,0 +1,67 @@
+<!-- src/views/login.hbs -->
+<h1>{{title}}</h1>
+<form id="loginForm" action="/api/sessions/login" method="POST">
+    <div>
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" required>
+    </div>
+    <div>
+        <label for="password">Contraseña:</label>
+        <input type="password" id="password" name="password" required>
+    </div>
+    <button type="submit">Iniciar Sesión</button>
+    </form>
+    <p>¿No tienes una cuenta? <a href="/register">Regístrate aquí</a></p>
+    <p>¿Olvidaste tu contraseña? <a href="/request-password-reset">Restablecer Contraseña</a></p>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('loginForm');
+
+        form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        try {
+            const response = await fetch('/api/sessions/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password }),
+            credentials: 'include', // Incluir cookies
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.status === 'success') {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: 'Login exitoso',
+                timer: 1500,
+                showConfirmButton: false,
+            }).then(() => {
+                window.location.href = '/products';
+            });
+            } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error de Inicio de Sesión',
+                text: data.message || 'Credenciales inválidas o error en el servidor.',
+            });
+            }
+        } catch (error) {
+            console.error('Error de red al iniciar sesión:', error);
+            Swal.fire({
+            icon: 'error',
+            title: 'Error de Conexión',
+            text: 'No se pudo conectar al servidor para iniciar sesión.',
+            });
+        }
+        });
+    });
+</script>
