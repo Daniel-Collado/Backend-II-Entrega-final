@@ -87,10 +87,6 @@ app.use('/api/carts', cartRouter);
 app.use('/api/tickets', ticketRouter);
 app.use('/', viewsRouter);
 
-// Manejo de errores 404
-app.use((req, res, next) => {
-    res.status(404).send('Página no encontrada');
-});
 
 // Conexión a Mongo
 mongoose.connect(`${MONGO_URI}/integrative_practice`)
@@ -100,4 +96,9 @@ mongoose.connect(`${MONGO_URI}/integrative_practice`)
 const serverPort = PORT;
 app.listen(serverPort, () => {
     console.log(`Servidor iniciado en puerto ${serverPort}`);
+});
+
+// Manejo de errores 404
+app.use((req, res, next) => {
+    res.status(404).send('Página no encontrada');
 });
