@@ -1,5 +1,6 @@
 import express from 'express';
-import mongoose from 'mongoose';
+import connectDB from './src/config/db.js';
+
 import { engine } from 'express-handlebars';
 import path from 'path';
 import cookieParser from 'cookie-parser';
@@ -22,7 +23,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 
-const { PORT, MONGO_URI, SECRET } = config;
+const { PORT } = config;
 const app = express();
 
 // Handlebars
@@ -92,13 +93,14 @@ app.use((req, res, next) => {
     res.status(404).send('Página no encontrada');
 });
 
-// Conexión a Mongo
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('Conectado a MongoDB'))
-    .catch(err => console.error('Error al conectar a MongoDB:', err));
+// Iniciar conexión a Mongo y servidor
 
-const serverPort = PORT;
-app.listen(serverPort, () => {
+connectDB().then(() => {
+  const serverPort = PORT;
+  app.listen(serverPort, () => {
     console.log(`Servidor iniciado en puerto ${serverPort}`);
+  });
+}).catch(err => {
+  console.error('Error al iniciar el servidor:', err);
 });
 

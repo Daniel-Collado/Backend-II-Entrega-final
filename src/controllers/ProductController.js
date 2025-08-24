@@ -1,5 +1,6 @@
 import ProductService from '../services/ProductService.js';
 import cloudinary from '../config/cloudinary.config.js';
+import { Readable } from 'stream'; 
 
 class ProductController {
     constructor(productService) {
@@ -38,19 +39,29 @@ class ProductController {
         const thumbnail = req.file;
 
         if (!title || !description || !code || !price || !stock || !category) {
-        return res.status(400).json({ status: 'error', message: 'Faltan campos obligatorios para crear el producto.' });
+            return res.status(400).json({ status: 'error', message: 'Faltan campos obligatorios para crear el producto.' });
         }
 
         try {
-        let thumbnailUrl = '';
-        if (thumbnail) {
-            const uploadResult = await cloudinary.uploader.upload(`data:${thumbnail.mimetype};base64,${thumbnail.buffer.toString('base64')}`, {
-            folder: 'thumbnails',
+            let thumbnailUrl = '';
+            if (thumbnail) {
+            thumbnailUrl = await new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream(
+                { folder: 'thumbnails' },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result.secure_url);
+                }
+                );
+                const bufferStream = Readable.from(thumbnail.buffer);
+                bufferStream.pipe(uploadStream);
+            }).catch((error) => {
+                throw new Error(`Error al subir a Cloudinary: ${error.message}`);
             });
-            thumbnailUrl = uploadResult.secure_url;
-        }
+            console.log('URL de Cloudinary obtenida:', thumbnailUrl); // Depuración
+            }
 
-        const productData = {
+            const productData = {
             title,
             description,
             code,
@@ -58,18 +69,18 @@ class ProductController {
             stock: parseInt(stock, 10),
             category,
             thumbnail: thumbnailUrl ? [thumbnailUrl] : [],
-        };
+            };
 
-        const createdProduct = await this.productService.createProduct(productData);
-        res.status(201).json({ status: 'success', message: 'Producto creado exitosamente.', product: createdProduct });
+            const createdProduct = await this.productService.createProduct(productData);
+            res.status(201).json({ status: 'success', message: 'Producto creado exitosamente.', product: createdProduct });
         } catch (error) {
-        console.error('Error en ProductController.createProduct:', error);
-        if (error.message.includes('Ya existe un producto con este código')) {
+            console.error('Error en ProductController.createProduct:', error);
+            if (error.message.includes('Ya existe un producto con este código')) {
             return res.status(409).json({ status: 'error', message: error.message });
+            }
+            res.status(500).json({ status: 'error', message: error.message || 'Error interno del servidor al crear el producto.' });
         }
-        res.status(500).json({ status: 'error', message: error.message || 'Error interno del servidor al crear el producto.' });
-        }
-    }
+}
 
     // Actualizar un producto existente
     async updateProduct(req, res) {
@@ -78,15 +89,29 @@ class ProductController {
         const newThumbnail = req.file;
 
         try {
-        let thumbnailUrl = thumbnail || [];
-        if (newThumbnail) {
-            const uploadResult = await cloudinary.uploader.upload(`data:${newThumbnail.mimetype};base64,${newThumbnail.buffer.toString('base64')}`, {
-            folder: 'thumbnails',
-            });
-            thumbnailUrl = [uploadResult.secure_url];
-        }
+            let thumbnailUrl = thumbnail || [];
+            if (newThumbnail) {
+            const uploadStream = cloudinary.uploader.upload_stream(
+                { folder: 'thumbnails' },
+                (error, result) => {
+                if (error) throw error;
+                thumbnailUrl = [result.secure_url];
+                }
+            );
+            // Crear un stream desde el buffer y pipearlo a Cloudinary
+            const bufferStream = Readable.from(newThumbnail.buffer);
+            bufferStream.pipe(uploadStream);
 
-        const updateData = {
+            // Esperar a que la subida termine
+            await new Promise((resolve, reject) => {
+                uploadStream.on('finish', resolve);
+                uploadStream.on('error', reject);
+            }).catch((error) => {
+            throw error; // Propaga el error para que el catch externo lo maneje
+    });
+            }
+
+            const updateData = {
             title,
             description,
             code,
@@ -94,19 +119,19 @@ class ProductController {
             stock: stock ? parseInt(stock, 10) : undefined,
             category,
             thumbnail: thumbnailUrl,
-        };
+            };
 
-        // Filtrar campos undefined
-        Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
+            // Filtrar campos undefined
+            Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
 
-        const updatedProduct = await this.productService.updateProduct(productId, updateData);
-        if (!updatedProduct) {
+            const updatedProduct = await this.productService.updateProduct(productId, updateData);
+            if (!updatedProduct) {
             return res.status(404).json({ status: 'error', message: 'Producto no encontrado.' });
-        }
-        res.json({ status: 'success', payload: updatedProduct });
+            }
+            res.json({ status: 'success', payload: updatedProduct });
         } catch (error) {
-        console.error('Error en ProductController.updateProduct:', error);
-        res.status(500).json({ status: 'error', message: error.message || 'Error interno del servidor al actualizar el producto.' });
+            console.error('Error en ProductController.updateProduct:', error);
+            res.status(500).json({ status: 'error', message: error.message || 'Error interno del servidor al actualizar el producto.' });
         }
     }
 

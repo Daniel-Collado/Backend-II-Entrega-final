@@ -4,8 +4,18 @@ import { isAuthenticated, authorizeRoles } from '../middlewares/auth.middleware.
 import ProductController from '../controllers/ProductController.js';
 
 const router = Router();
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+//const storage = multer.memoryStorage();
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+        } else {
+        cb(new Error('Solo se permiten archivos de imagen.'), false);
+        }
+    },
+});
 
 // GET /api/products - Obtener todos los productos
 router.get('/', ProductController.getAllProducts.bind(ProductController));
