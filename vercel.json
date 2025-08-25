@@ -2,18 +2,14 @@
     "version": 2,
     "builds": [
         {
-            "src": "app.js",
-            "use": "@vercel/node"
+        "src": "app.js",
+        "use": "@vercel/node"
         }
     ],
     "routes": [
         {
-            "src": "/(favicon.ico|apple-touch-icon.png|favicon-16x16.png|favicon-32x32.png|site.webmanifest|styles.css)",
-            "dest": "/public/$1"
-        },
-        {
-            "src": "/(.*)",
-            "dest": "app.js"
+        "src": "/(.*)",
+        "dest": "app.js"
         }
     ]
 }
