@@ -26,7 +26,6 @@ const __dirname = dirname(__filename);
 const { PORT } = config;
 const app = express();
 
-app.use(express.static('public'));
 
 // Handlebars
 app.engine('hbs', engine({
