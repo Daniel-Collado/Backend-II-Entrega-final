@@ -53,6 +53,7 @@ app.engine('hbs', engine({
 app.set('views', path.join(__dirname, 'src', 'views'));
 app.set('view engine', 'hbs');
 
+
 // Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -97,11 +98,11 @@ app.use((req, res, next) => {
 // Iniciar conexión a Mongo y servidor
 
 connectDB().then(() => {
-  const serverPort = PORT;
-  app.listen(serverPort, () => {
-    console.log(`Servidor iniciado en puerto ${serverPort}`);
-  });
-}).catch(err => {
-  console.error('Error al iniciar el servidor:', err);
+    const serverPort = PORT;
+    app.listen(serverPort, () => {
+        console.log(`Servidor iniciado en puerto ${serverPort}`);
+    });
+    }).catch(err => {
+    console.error('Error al iniciar el servidor:', err);
 });
 
