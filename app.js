@@ -123,14 +123,14 @@ app.use((req, res, next) => {
 
 // Iniciar conexión a Mongo y servidor
 
-//connectDB().then(() => {
-//    const serverPort = PORT;
-//    app.listen(serverPort, () => {
-//        console.log(`Servidor iniciado en puerto ${serverPort}`);
-//    });
-//    }).catch(err => {
-//    console.error('Error al iniciar el servidor:', err);
-//});
+connectDB().then(() => {
+    const serverPort = PORT;
+    app.listen(serverPort, () => {
+        console.log(`Servidor iniciado en puerto ${serverPort}`);
+    });
+    }).catch(err => {
+    console.error('Error al iniciar el servidor:', err);
+});
 
-export default app;
+
 
