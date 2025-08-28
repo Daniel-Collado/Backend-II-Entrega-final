@@ -4,6 +4,9 @@ import connectDB from './src/config/db.js';
 import { engine } from 'express-handlebars';
 import path from 'path';
 import cookieParser from 'cookie-parser';
+
+import { ExtractJwt } from 'passport-jwt';
+import jwt from 'jsonwebtoken';
 import passport from 'passport';
 
 import initializedPassport from './src/config/passport.config.js';
@@ -61,19 +64,42 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'src', 'public')));
 app.use(cookieParser());
 
+const cookieExtractor = req => {
+    let token = null;
+    if (req && req.cookies) {
+        token = req.cookies['jwtCookie'];
+    }
+    return token;
+};
+
+app.use((req, res, next) => {
+    const token = cookieExtractor(req);
+    if (token) {
+        try {
+            const decoded = jwt.verify(token, config.JWT_SECRET);
+            req.user = decoded.user; // Establecer req.user si el token es válido
+        } catch (err) {
+            req.user = null; // Token inválido, dejar req.user como null
+        }
+    } else {
+        req.user = null;
+    }
+    res.locals.user = req.user || null;
+    next();
+});
 
 // Inicializar Passport
 initializedPassport();
 app.use(passport.initialize());
 
-app.use((req, res, next) => {
-    passport.authenticate('jwt', { session: false }, (err, user, info) => {
-        if (user) {
-            req.user = user;
-        }
-        next();
-    })(req, res, next);
-});
+//app.use((req, res, next) => {
+//    passport.authenticate('jwt', { session: false }, (err, user, info) => {
+//        if (user) {
+//            req.user = user;
+//        }
+//        next();
+//    })(req, res, next);
+//});
 
 // Pasar datos del user a vistas HBS
 app.use((req, res, next) => {

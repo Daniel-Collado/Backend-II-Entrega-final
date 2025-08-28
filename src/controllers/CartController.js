@@ -47,7 +47,8 @@ class CartController {
         const { cid, pid } = req.params;
         const { quantity = 1 } = req.body;
         const updatedCart = await CartService.addProductToCart(cid, pid, quantity);
-        res.json({ status: 'success', payload: updatedCart });
+        const totalItems = updatedCart.products.reduce((sum, item) => sum + item.quantity, 0);
+        res.json({ status: 'success', payload: updatedCart, cartCount: totalItems });
         } catch (error) {
         console.error('Error al añadir producto al carrito:', error);
         res.status(500).json({ status: 'error', message: error.message || 'Error en el servidor' });

@@ -170,7 +170,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                             showConfirmButton: false,
                             timer: 1500
                         });
-                        window.updateCartItemCount(); // Actualizar el contador del carrito
+                        // Actualizar el contador del carrito usando cartCount de la respuesta
+                        const cartItemCountSpan = document.getElementById('cart-item-count');
+                        if (cartItemCountSpan && data.cartCount !== undefined) {
+                            cartItemCountSpan.textContent = data.cartCount;
+                        }
                     } else {
                         Swal.fire({
                             icon: 'error',
