@@ -1,4 +1,6 @@
+// src/models/product.model.js
 import mongoose from 'mongoose';
+import mongoosePaginate from 'mongoose-paginate-v2'; // <- Se importa el plugin
 
 const productCollection = 'products';
 
@@ -11,7 +13,9 @@ const productSchema = new mongoose.Schema({
     stock: { type: Number, required: true },
     category: { type: String, required: true },
     thumbnail: { type: [String], default: '' } 
-}, { timestamps: true }); 
+}, { timestamps: true });
+
+productSchema.plugin(mongoosePaginate); // <- Se aplica el plugin al esquema
 
 const productModel = mongoose.model(productCollection, productSchema);
 

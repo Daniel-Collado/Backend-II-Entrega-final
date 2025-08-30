@@ -5,8 +5,8 @@ class ProductService {
         this.productRepository = productRepository;
     }
 
-    async getAllProducts() {
-        return await this.productRepository.getAllProducts();
+    async getAllProducts(query = {}, page = 1, limit = 10) { // <- Se agregaron page y limit
+        return await this.productRepository.getAllProducts(query, page, limit); // <- Se pasan a la capa de repositorio
     }
 
     async getProductById(id) {

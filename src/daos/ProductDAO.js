@@ -1,8 +1,13 @@
+// src/daos/ProductDAO.js
 import productModel from '../models/product.model.js';
 
 class ProductDAO {
-    async find() {
-        return await productModel.find().lean();
+    async paginate(query = {}, options = {}) {
+        return await productModel.paginate(query, options);
+    }
+    
+    async find(query = {}) {
+        return await productModel.find(query).lean();
     }
 
     async findById(id) {

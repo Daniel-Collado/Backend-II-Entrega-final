@@ -1,3 +1,4 @@
+// src/repositories/ProductRepository.js
 import ProductDAO from '../daos/ProductDAO.js';
 
 class ProductRepository {
@@ -5,8 +6,9 @@ class ProductRepository {
         this.dao = dao;
     }
 
-    async getAllProducts() {
-        return await this.dao.find();
+    // Se cambió de this.dao.find(query) a this.dao.paginate(query, { page, limit })
+    async getAllProducts(query = {}, page = 1, limit = 10) {
+        return await this.dao.paginate(query, { page, limit, lean: true });
     }
 
     async getProductById(id) {
@@ -14,7 +16,7 @@ class ProductRepository {
     }
 
     async createProduct(productData) {
-        return await this.dao.create(productData);
+        return await this.dao.createProduct(productData);
     }
 
     async updateProduct(id, data) {
