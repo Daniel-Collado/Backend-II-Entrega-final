@@ -16,7 +16,7 @@ class ProductRepository {
     }
 
     async createProduct(productData) {
-        return await this.dao.createProduct(productData);
+        return await this.dao.create(productData);
     }
 
     async updateProduct(id, data) {
