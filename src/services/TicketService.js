@@ -34,6 +34,10 @@ class TicketService {
     async getTicketByCode(code) {
         return await this.ticketRepository.getTicketByCode(code);
     }
+
+    async getAllTickets() {
+        return await this.ticketRepository.getAllTickets();
+    }
 }
 
 export default new TicketService(TicketRepository);

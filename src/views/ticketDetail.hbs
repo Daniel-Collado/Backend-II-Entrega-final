@@ -12,7 +12,9 @@
             <div class="ticket-products-grid">
                 {{#each ticket.products}}
                     <div class="ticket-product-card">
-                        <p><strong>Producto ID:</strong> {{product}}</p>
+                        <p><strong>Producto ID:</strong> {{product._id}}</p>
+                        <p><strong>Artista:</strong> {{product.description}}</p>
+                        <p><strong>Album:</strong> {{product.title}}</p>
                         <p><strong>Cantidad:</strong> {{quantity}}</p>
                         <p><strong>Precio al comprar:</strong> ${{price}}</p>
                     </div>

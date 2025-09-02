@@ -4,6 +4,7 @@ import CartService from '../services/CartService.js';
 import UserService from '../services/UserService.js';
 import TicketService from '../services/TicketService.js';
 
+
 class ViewsController {
   // Renderizar página principal
     async renderHome(req, res) {
@@ -202,6 +203,30 @@ class ViewsController {
         } catch (error) {
         console.error('Error al renderizar vista de ticket:', error);
         res.status(500).render('failed', { title: 'Error', message: 'Error al cargar el detalle del ticket.' });
+        }
+    }
+
+    //Renderizar todos los tickets (admin)
+    async renderTickets(req, res) {
+        try {
+            // Validar rol de administrador
+            if (!req.user || req.user.role !== 'admin') {
+                return res.status(403).render('error', {
+                    title: 'Acceso Denegado',
+                    message: 'No tienes permisos para ver esta página.'
+                });
+            }
+
+            const tickets = await TicketService.getAllTickets();
+
+            res.render('tickets', {
+                title: 'Tickets',
+                tickets: tickets,
+                user: req.user
+            });
+        } catch (error) {
+            console.error('Error al renderizar la vista de tickets:', error);
+            res.status(500).render('error', { error: 'No se pudieron cargar los tickets.' });
         }
     }
 }

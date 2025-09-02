@@ -2,7 +2,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const productsContainer = document.getElementById('products-container');
     const paginationControls = document.getElementById('pagination-controls');
-    const cartId = document.body.dataset.userCartId; // <-- Se corrigió el nombre del atributo de datos
+    const cartId = document.body.dataset.userCartId;
     const userRole = document.body.dataset.userRole;
     const searchInput = document.getElementById('search-input');
     const categorySelect = document.getElementById('category-select');
@@ -45,6 +45,41 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         } else if (cartItemCountSpan) {
             cartItemCountSpan.textContent = '0';
+        }
+    };
+
+    // Función para actualizar la UI de paginación
+    const updatePaginationControls = (page, totalPages) => {
+        if (!paginationControls) return;
+        paginationControls.innerHTML = ''; // Limpia los controles existentes
+
+        if (totalPages > 1) {
+            // Botón de página anterior
+            const prevButton = document.createElement('button');
+            prevButton.textContent = 'Anterior';
+            prevButton.disabled = page === 1;
+            prevButton.onclick = () => fetchProducts(searchInput.value, categorySelect.value, page - 1);
+            paginationControls.appendChild(prevButton);
+
+            // Indicador de página actual
+            const pageSpan = document.createElement('span');
+            pageSpan.textContent = `Página ${page} de ${totalPages}`;
+            paginationControls.appendChild(pageSpan);
+
+            // Botón de página siguiente
+            const nextButton = document.createElement('button');
+            nextButton.textContent = 'Siguiente';
+            nextButton.disabled = page === totalPages;
+            nextButton.onclick = () => fetchProducts(searchInput.value, categorySelect.value, page + 1);
+            paginationControls.appendChild(nextButton);
+
+            // 💡 Nuevo: Botón de última página (se añade si no es la última página)
+            if (page < totalPages) {
+                const lastPageButton = document.createElement('button');
+                lastPageButton.textContent = 'Última';
+                lastPageButton.onclick = () => fetchProducts(searchInput.value, categorySelect.value, totalPages);
+                paginationControls.appendChild(lastPageButton);
+            }
         }
     };
 
@@ -131,7 +166,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <input type="number" id="quantity-${product._id}" class="product-quantity-input" value="1" min="1" max="${product.stock}" style="width: 60px; text-align: center;">
                     </div>
                     <button class="add-to-cart-btn" data-product-id="${product._id}">Agregar al Carrito</button>
-                    ${userRole === 'admin' ? `<button class="edit-product-btn" data-product-id="${product._id}">Editar</button>` : ''}
+                    ${userRole === 'admin' ? `
+                        <button class="edit-product-btn" data-product-id="${product._id}">Editar</button>
+                        <button class="delete-btn" data-product-id="${product._id}">Eliminar</button>`
+                    : ''}
                 `;
                 productsContainer.appendChild(productCard);
             });
@@ -139,8 +177,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Lógica para renderizar los controles de paginación
             renderPaginationControls({ totalPages, currentPage, hasPrevPage, hasNextPage, prevPage, nextPage });
 
-            attachAddToCartListeners();
-            attachEditProductListeners();
+            // Adjuntar listeners después de renderizar los productos
+            attachEventListeners();
+
             window.updateCartItemCount();
         } catch (error) {
             console.error('Hubo un error al cargar los productos:', error);
@@ -181,6 +220,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
         paginationControls.appendChild(nextButton);
+
+        // Botón de última página (se añade si no es la última página)
+        if (currentPage < totalPages) {
+            const lastPageButton = document.createElement('button');
+            lastPageButton.textContent = 'Última';
+            lastPageButton.addEventListener('click', () => {
+                fetchProducts(searchInput.value, categorySelect.value, totalPages);
+            });
+            paginationControls.appendChild(lastPageButton);
+        }
     }
     
     // Cargar productos al iniciar
@@ -224,9 +273,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Input search-input no encontrado');
     }
 
-    function attachAddToCartListeners() {
+    function attachEventListeners() {
+        // Adjuntar listeners para el botón de agregar al carrito
         const addToCartButtons = document.querySelectorAll('.add-to-cart-btn');
-
         addToCartButtons.forEach(button => {
             button.addEventListener('click', async (event) => {
                 const productId = event.target.dataset.productId;
@@ -303,10 +352,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
         });
-    }
-
-    // --- Funcionalidad de Edición para Admin---
-    function attachEditProductListeners() {
+        
+        // --- Funcionalidad de Edición para Admin ---
         const editButtons = document.querySelectorAll('.edit-product-btn');
         editButtons.forEach(button => {
             button.addEventListener('click', async (event) => {
@@ -339,6 +386,59 @@ document.addEventListener('DOMContentLoaded', async () => {
                         text: error.message || 'No se pudo cargar el producto para edición.'
                     });
                     console.error('Error al cargar producto para edición:', error);
+                }
+            });
+        });
+
+        // --- Funcionalidad de Eliminación para Admin ---
+        const deleteButtons = document.querySelectorAll('.delete-btn');
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', async (event) => {
+                const productId = event.target.dataset.productId;
+                
+                // Pide confirmación antes de eliminar
+                const result = await Swal.fire({
+                    title: '¿Estás seguro?',
+                    text: '¡No podrás revertir esto!',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Sí, eliminarlo',
+                    cancelButtonText: 'Cancelar'
+                });
+
+                if (result.isConfirmed) {
+                    try {
+                        const response = await fetch(`/api/products/${productId}`, {
+                            method: 'DELETE'
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            Swal.fire(
+                                '¡Eliminado!',
+                                'El producto ha sido eliminado.',
+                                'success'
+                            );
+                            // Recarga la lista de productos para actualizar la vista
+                            fetchProducts(searchInput.value.trim(), categorySelect.value);
+                        } else {
+                            Swal.fire(
+                                'Error',
+                                data.message || 'No se pudo eliminar el producto.',
+                                'error'
+                            );
+                        }
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error de Conexión',
+                            text: 'No se pudo conectar al servidor para eliminar el producto.'
+                        });
+                        console.error('Error de red al eliminar producto:', error);
+                    }
                 }
             });
         });

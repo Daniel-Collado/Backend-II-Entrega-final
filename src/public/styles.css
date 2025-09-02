@@ -15,7 +15,7 @@ body {
 
 /* CONTENEDOR INTERNO DE HEADER/FOOTER/MAIN */
 .container {
-    max-width: 800px; 
+    max-width: 1200px; 
     margin: 0 auto; 
     padding: 0 1rem; 
 }
@@ -92,10 +92,10 @@ h2 {
 
 /* Estilos para el contenedor de productos */
 .products-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 20px;
-    padding: 20px 0;
+    justify-content: center;
 }
 
 /* Estilos para cada card de producto */
@@ -224,6 +224,11 @@ footer {
     bottom: 0;
     width: 100%; 
     margin-top: auto; 
+}
+
+/* Separación del footer */
+main.container {
+    padding-bottom: 50px; /* Asegura un espacio entre el contenido principal y el footer */
 }
 
 /* Estilos para el detalle del carrito */
@@ -472,4 +477,103 @@ footer {
 
 .filter-button-reset:hover {
     background-color: #5a6268;
+}
+
+/* Estilos para tabla de tickets */
+.tickets-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    background-color: #fff;
+}
+
+.tickets-table th, .tickets-table td {
+    border: 1px solid #ddd; /* Borde de celda para las divisiones */
+    padding: 12px 15px; /* Relleno para mayor legibilidad */
+    text-align: left;
+}
+
+.tickets-table th {
+    background-color: #333;
+    color: white;
+    text-transform: uppercase;
+    font-size: 0.9em;
+}
+
+.tickets-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9; /* Color de fondo para filas pares */
+}
+
+.tickets-table tbody tr:hover {
+    background-color: #f1f1f1; /* Resaltar la fila al pasar el mouse */
+}
+
+.tickets-table a {
+    color: #007BFF;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.tickets-table a:hover {
+    text-decoration: underline;
+}
+
+/* Estilos para los controles de paginación */
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.pagination-controls button {
+    background-color: #333;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s ease;
+}
+
+.pagination-controls button:hover {
+    background-color: #555;
+}
+
+.pagination-controls button:disabled {
+    background-color: #aaa;
+    cursor: not-allowed;
+}
+
+.pagination-controls span {
+    font-size: 1em;
+    font-weight: bold;
+}
+
+/* Media Queries */
+/* Pantallas grandes (más de 1200px) - 4 tarjetas por fila */
+@media (min-width: 1200px) {
+    .product-card {
+        flex: 1 1 calc(25% - 15px); /* 4 tarjetas por fila, con espacio */
+        max-width: calc(25% - 15px);
+    }
+}
+
+/* Pantallas medianas (entre 768px y 1199px) - 2 tarjetas por fila */
+@media (min-width: 768px) and (max-width: 1199px) {
+    .product-card {
+        flex: 1 1 calc(50% - 10px); /* 2 tarjetas por fila, con espacio */
+        max-width: calc(50% - 10px);
+    }
+}
+
+/* Pantallas pequeñas (menos de 768px) - 1 tarjeta por fila */
+@media (max-width: 767px) {
+    .product-card {
+        flex: 1 1 100%; /* 1 tarjeta por fila */
+        max-width: 100%;
+    }
 }

@@ -16,6 +16,10 @@ class TicketRepository {
     async getTicketByCode(code) {
         return await this.dao.findByCode(code);
     }
+
+    async getAllTickets() {
+        return await this.dao.find();
+    }
 }
 
 export default new TicketRepository(TicketDAO);

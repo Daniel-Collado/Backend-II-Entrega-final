@@ -34,4 +34,10 @@ router.get('/cart', passport.authenticate('jwt', { session: false, failureRedire
 // Vista de detalles de ticket (protegida)
 router.get('/ticket/:code', passport.authenticate('jwt', { session: false, failureRedirect: '/login' }), ViewsController.renderTicket.bind(ViewsController));
 
+//Vista de obtención de todos los tickets (protegida)
+router.get('/tickets', passport.authenticate('jwt', { session: false, failureRedirect: '/login' }), ViewsController.renderTickets.bind(ViewsController));
+
+// NUEVA RUTA: Vista de detalles de un ticket individual para administradores
+router.get('/tickets/:code', passport.authenticate('jwt', { session: false, failureRedirect: '/login' }), ViewsController.renderTicket.bind(ViewsController));
+
 export default router;
