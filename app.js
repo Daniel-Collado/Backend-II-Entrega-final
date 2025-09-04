@@ -8,6 +8,8 @@ import cookieParser from 'cookie-parser';
 import { ExtractJwt } from 'passport-jwt';
 import jwt from 'jsonwebtoken';
 import passport from 'passport';
+import moment from 'moment';
+import 'moment-timezone';
 
 import initializedPassport from './src/config/passport.config.js';
 import config from './src/config/index.js';
@@ -29,6 +31,7 @@ const __dirname = dirname(__filename);
 const { PORT } = config;
 const app = express();
 
+moment.locale('es');
 
 // Handlebars
 app.engine('hbs', engine({
@@ -41,8 +44,10 @@ app.engine('hbs', engine({
         },
         formatDate: function (date) {
             if (!date) return '';
-            const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
-            return new Date(date).toLocaleDateString('es-ES', options);
+            // Convierte la fecha UTC (de MongoDB) a la zona horaria de Buenos Aires
+            const localTime = moment.utc(date).tz('America/Argentina/Buenos_Aires');
+            // Formatea la fecha y hora a un formato legible
+            return localTime.format('DD [de] MMMM [de] YYYY, HH:mm:ss');
         },
         multiply: function (a, b) {
             return (a * b).toFixed(2);
