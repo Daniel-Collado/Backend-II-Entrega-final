@@ -10,6 +10,7 @@ import jwt from 'jsonwebtoken';
 import passport from 'passport';
 import moment from 'moment';
 import 'moment-timezone';
+import 'moment/locale/es';
 
 import initializedPassport from './src/config/passport.config.js';
 import config from './src/config/index.js';
