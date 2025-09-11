@@ -18,11 +18,17 @@ class CartService {
     }
 
     async addProductToCart(cartId, productId, quantity) {
+        const cart = await this.cartRepository.getCartById(cartId);
         const product = await this.productRepository.getProductById(productId);
         if (!product) {
             throw new Error('Producto no encontrado.');
         }
-        if (product.stock < quantity) {
+
+        const cartProduct = cart.products.find(item => item.product._id.toString() === productId);
+        const currentQuantityInCart = cartProduct ? cartProduct.quantity : 0;
+        const totalQuantity = currentQuantityInCart + quantity;
+
+        if (product.stock < totalQuantity) {
             throw new Error(`Stock insuficiente para el producto ${product.title}. Stock disponible: ${product.stock}`);
         }
         return await this.cartRepository.addProductToCart(cartId, productId, quantity);

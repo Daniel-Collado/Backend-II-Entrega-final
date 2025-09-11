@@ -142,38 +142,35 @@ class ViewsController {
     }
 
     // Renderizar detalles del carrito
+    
+    
     async renderCart(req, res) {
         try {
-        if (!req.user) {
-            return res.redirect('/login');
-        }
-        if (!req.user.cart) {
-            return res.render('cartDetail', {
-            title: 'Tu Carrito',
-            cart: null,
-            message: 'No tienes un carrito asociado.',
-            user: req.user,
-            });
-        }
-        const cart = await CartService.getCartById(req.user.cart);
-        if (!cart) {
-            return res.render('cartDetail', {
-            title: 'Tu Carrito',
-            cart: null,
-            message: 'No se encontró tu carrito.',
-            user: req.user,
-            });
-        }
-        res.render('cartDetail', {
+            if (!req.user) return res.redirect('/login');
+
+            let cart = null;
+            if (req.user.cart) {
+            cart = await CartService.getCartById(req.user.cart);
+            }
+
+            res.render('cartDetail', {
             title: 'Tu Carrito',
             cart,
-            user: req.user,
-        });
+            user: {
+                first_name: req.user.first_name,
+                last_name: req.user.last_name,
+                email: req.user.email,
+                role: req.user.role,
+                cartId: (cart && cart._id) ? String(cart._id) : (req.user.cart || null)
+            }
+            });
         } catch (error) {
-        console.error('Error al renderizar vista de carrito:', error);
-        res.status(500).render('failed', { title: 'Error', message: 'Error al cargar el carrito.' });
+            console.error('Error al renderizar vista de carrito:', error);
+            res.status(500).render('failed', { title: 'Error', message: 'Error al cargar el carrito.' });
         }
     }
+
+
 
     // Renderizar detalles de un ticket
     async renderTicket(req, res) {

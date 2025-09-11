@@ -25,28 +25,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Función para formatear texto
     const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 
-    // Función global para actualizar el contador del carrito
-    window.updateCartItemCount = async () => {
-        const cartItemCountSpan = document.getElementById('cart-item-count');
-        if (cartItemCountSpan && cartId && cartId !== 'null') {
-            try {
-                const response = await fetch(`/api/carts/${cartId}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    const totalItems = data.payload.products.reduce((sum, item) => sum + item.quantity, 0);
-                    cartItemCountSpan.textContent = totalItems;
-                } else {
-                    console.error('Error al obtener el carrito para el contador:', response.statusText);
-                    cartItemCountSpan.textContent = '0';
-                }
-            } catch (error) {
-                console.error('Error de red al obtener el carrito para el contador:', error);
-                cartItemCountSpan.textContent = '0';
-            }
-        } else if (cartItemCountSpan) {
-            cartItemCountSpan.textContent = '0';
-        }
-    };
 
     // Función para actualizar la UI de paginación
     const updatePaginationControls = (page, totalPages) => {
@@ -180,7 +158,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Adjuntar listeners después de renderizar los productos
             attachEventListeners();
 
-            window.updateCartItemCount();
+            // ahora usa la función global de cartCounter.js
+            if (typeof window.updateCartItemCount === 'function') {
+                window.updateCartItemCount();
+            }
         } catch (error) {
             console.error('Hubo un error al cargar los productos:', error);
             productsContainer.innerHTML = `<p>Error al cargar los productos: ${error.message}</p>`;
